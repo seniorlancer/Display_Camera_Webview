@@ -37,14 +37,21 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        loadViewView();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         if (!checkPermission(PERMISSIONS_REQUIRED)){
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 ActivityCompat.requestPermissions(this, PERMISSIONS_REQUIRED, REQUEST_PERMISSIONS);
             }
+        } else {
+            setFrontCamera();
+            mWebView.loadUrl("https://192.168.105.39:4444");
         }
-
-        loadViewView();
-        setFrontCamera();
     }
 
     private void setFrontCamera() {
@@ -52,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         int numberOfCameras = Camera.getNumberOfCameras();
         for (int i = 0; i < numberOfCameras; i++) {
             Camera.getCameraInfo(i, cameraInfo);
-            if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            if (cameraInfo.facing != Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 Camera.open(i);
             }
         }
@@ -87,10 +94,10 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                 handler.proceed();
             }
         });
-        mWebView.loadUrl("https://192.168.35.1:4444");
 
         mWebView.setWebChromeClient(mWebChromeClient);
         mWebView.getSettings().setJavaScriptEnabled(true);
+        mWebView.getSettings().setMediaPlaybackRequiresUserGesture(false);
     }
 
     private WebChromeClient mWebChromeClient = new WebChromeClient() {
@@ -101,4 +108,19 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             }
         }
     };
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (permissions.length != 1 || grantResults.length != 1 ||
+                    grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Log.e("Webview", "Camera permission not granted.");
+            } else if (mWebView != null) {
+                setFrontCamera();
+                mWebView.loadUrl("https://192.168.105.39:4444");
+            }
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
 }
